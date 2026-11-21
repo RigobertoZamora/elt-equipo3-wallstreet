@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Monitor Burs&aacute;til &amp; Orquestador ELT/DAG | Wall Street (1928 - 2031)</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <!-- Banner Superior de Alerta Crítica -->
+  <div id="top-alert-banner" class="top-alert-banner hidden" role="alert">
+    <div class="alert-left">
+      <span class="alert-triangle">&#9888;</span>
+      <div>
+        <div id="alert-heading" class="alert-heading">&#128680; &iexcl;ALERTA CR&Iacute;TICA! CA&Iacute;DA DEL MERCADO DETECTADA</div>
+        <div id="alert-subtext" class="alert-subtext">
+          -- | &Iacute;ndice: $-- | Desplome detectado
+        </div>
+      </div>
+    </div>
+    <button id="btn-mute" class="btn-mute" title="Silenciar alarma sonora">Silenciar</button>
+  </div>
+
+  <main class="page-wrapper">
+    <!-- Barra de Fuente Externa (Prueba de que no hay datos incrustados) -->
+    <section class="source-bar card">
+      <div class="source-info">
+        <span class="live-dot" id="api-dot"></span>
+        <span><strong>Fuente externa:</strong> <span id="src-api-name">Consultando API...</span></span>
+        <span class="sep">|</span>
+        <span><strong>&Iacute;ndice:</strong> Wall Street S&amp;P 500 (1928&ndash;2026 Real + 2027&ndash;2031 Predicci&oacute;n ML)</span>
+        <span class="sep">|</span>
+        <span><strong>Registros cargados:</strong> <span id="src-records">--</span></span>
+      </div>
+      <button id="btn-refresh-api" class="btn-outline-sm">Consultar API de nuevo</button>
+    </section>
+
+    <!-- Fila de 5 Tarjetas KPI -->
+    <section class="kpi-row">
+      <div class="kpi-card card">
+        <span class="kpi-title">FECHA DE SESI&Oacute;N</span>
+        <strong id="kpi-date" class="kpi-main">--</strong>
+        <span id="kpi-session-count" class="kpi-sub">Sesi&oacute;n 0 de 0</span>
+      </div>
+
+      <div class="kpi-card card">
+        <span class="kpi-title">VALOR DEL &Iacute;NDICE</span>
+        <strong id="kpi-price" class="kpi-main">$0.00</strong>
+        <span id="kpi-peak" class="kpi-sub">M&aacute;ximo registrado: $0.00</span>
+      </div>
+
+      <div class="kpi-card card">
+        <span class="kpi-title">VARIACI&Oacute;N DEL PERIODO</span>
+        <strong id="kpi-change" class="kpi-main">0.00%</strong>
+        <span class="kpi-sub">Umbral Circuit Breaker: -4.50%</span>
+      </div>
+
+      <div class="kpi-card card">
+        <span class="kpi-title">CA&Iacute;DA DESDE M&Aacute;XIMO (DRAWDOWN)</span>
+        <strong id="kpi-drawdown" class="kpi-main">0.00%</strong>
+        <span class="kpi-sub">Umbral crack sist&eacute;mico: -12.00%</span>
+      </div>
+
+      <div id="kpi-detector-card" class="kpi-card card detector-normal">
+        <span class="kpi-title">ESTADO DEL DETECTOR</span>
+        <strong id="kpi-detector-state" class="kpi-main detector-text">ESTABLE</strong>
+        <span id="kpi-detector-reason" class="kpi-sub">Sin anomal&iacute;as detectadas</span>
+      </div>
+    </section>
+
+    <!-- Seccion Principal: Grafica en Tiempo Real (Izquierda) + Panel de Simulacion (Derecha) -->
+    <section class="main-grid">
+      <div class="chart-panel card">
+        <div class="chart-header">
+          <div>
+            <h2>Evoluci&oacute;n del Mercado en Tiempo Real</h2>
+            <div class="jump-bar">
+              <span class="jump-label">Saltar a &eacute;poca:</span>
+              <button class="jump-chip active" data-jump="start">1928 (Crack 1929)</button>
+              <button class="jump-chip" data-jump="2008">Crisis 2008</button>
+              <button class="jump-chip" data-jump="2020">2020 &rarr; 2026</button>
+              <button class="jump-chip" data-jump="2026">2026 &rarr; Predicci&oacute;n ML (2031)</button>
+            </div>
+          </div>
+          <div class="header-badges">
+            <span id="phase-badge" class="badge-pill badge-blue">&Iacute;ndice Hist&oacute;rico (API)</span>
+            <span class="badge-pill badge-purple">Predicci&oacute;n ML (2027&ndash;2031)</span>
+            <span class="badge-pill badge-red">Zona de Riesgo (-12% desde pico)</span>
+          </div>
+        </div>
+
+        <div class="canvas-container">
+          <canvas id="marketChart"></canvas>
+        </div>
+      </div>
+
+      <aside class="sim-panel card">
+        <h2>Panel de Simulaci&oacute;n</h2>
+        <p class="sim-desc">
+          Los datos se reproducen cronol&oacute;gicamente desde la API (1928 &rarr; 2026) y contin&uacute;an con la
+          predicci&oacute;n ML (2027 &rarr; 2031). Presiona el bot&oacute;n rojo para forzar el escenario de p&aacute;nico y ca&iacute;da del mercado.
+        </p>
+
+        <button id="btn-simulate-crash" class="btn-crash">
+          &#128680; Simular Ca&iacute;da del Mercado
+        </button>
+
+        <div class="sim-controls-row">
+          <button id="btn-toggle-play" class="btn-dark">Pausar</button>
+          <button id="btn-restart" class="btn-light">Reiniciar</button>
+        </div>
+
+        <div class="speed-group">
+          <label for="speed-select">Velocidad de simulaci&oacute;n:</label>
+          <select id="speed-select" class="speed-select">
+            <option value="450">Normal (1 sesi&oacute;n / 0.45s)</option>
+            <option value="120" selected>R&aacute;pida (1 sesi&oacute;n / 0.12s)</option>
+            <option value="35">Turbo 100 A&ntilde;os (1 sesi&oacute;n / 0.035s)</option>
+            <option value="900">Lenta (1 sesi&oacute;n / 0.90s)</option>
+          </select>
+        </div>
+
+        <div class="rules-box">
+          <h3>Reglas del Motor de Detecci&oacute;n</h3>
+          <ul>
+            <li><strong>Alerta Preventiva:</strong> Ca&iacute;da &le; -3.0% o Drawdown &le; -7.0%</li>
+            <li><strong>Alerta Cr&iacute;tica:</strong> Ca&iacute;da &le; -4.5% o Drawdown &le; -12.0%</li>
+            <li><strong>Acci&oacute;n autom&aacute;tica:</strong> Alarma sonora, notificaci&oacute;n, registro en historial y disparo de contingencia DAG (<code>T5</code>).</li>
+          </ul>
+        </div>
+      </aside>
+    </section>
+
+    <!-- Tabla de Historial de Alertas y Eventos Detectados (Aporte del compa&ntilde;ero) -->
+    <section class="card section-pad">
+      <div class="section-top">
+        <div>
+          <h2>Tabla de Historial &mdash; Bit&aacute;cora de Alertas y Eventos Detectados</h2>
+          <p class="section-sub">Registro cronol&oacute;gico en vivo de ca&iacute;das, advertencias y activaciones del Circuit Breaker.</p>
+        </div>
+        <button id="btn-clear-history" class="btn-outline-sm">Limpiar historial</button>
+      </div>
+      <div class="table-scroll">
+        <table class="clean-table">
+          <thead>
+            <tr>
+              <th>Hora Detecci&oacute;n</th>
+              <th>Fecha Mercado</th>
+              <th>Valor &Iacute;ndice</th>
+              <th>Var. Periodo</th>
+              <th>Drawdown</th>
+              <th>Diagn&oacute;stico del Detector</th>
+            </tr>
+          </thead>
+          <tbody id="history-table-body">
+            <tr class="empty-row">
+              <td colspan="6">Monitoreando sesiones... Los eventos de advertencia o crack aparecer&aacute;n aqu&iacute; autom&aacute;ticamente.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Orquestador DAG (Diagrama SVG + Tabla de Tareas + Trigger Rules) -->
+    <section class="card section-pad">
+      <div class="section-top">
+        <div>
+          <h2>Orquestador DAG (Grafo Ac&iacute;clico Dirigido) &amp; Trigger Rules</h2>
+          <p class="section-sub">
+            Modelado de dependencias, estados (<code>SUCCESS</code>, <code>FAILED</code>, <code>SKIPPED</code>, <code>TRIGGERED</code>) y contingencia ante fallos.
+          </p>
+        </div>
+        <div class="dag-actions">
+          <button id="btn-dag-normal" class="btn-dark-sm">&#9654; Ejecutar DAG (Normal)</button>
+          <button id="btn-dag-crisis" class="btn-crash-sm">&#128680; Ejecutar DAG (Contingencia / Crisis)</button>
+        </div>
+      </div>
+
+      <div class="dag-meta-bar">
+        <span><strong>Estado del DAG:</strong> <span id="dag-overall-badge" class="st-pill st-SUCCESS">SUCCESS</span></span>
+        <span><strong>Run ID:</strong> <span id="dag-run-id">--</span></span>
+        <span><strong>Duraci&oacute;n total:</strong> <span id="dag-duration">--</span></span>
+      </div>
+
+      <!-- Grafo SVG Visual del DAG -->
+      <div id="dag-svg-container" class="dag-svg-box"></div>
+
+      <!-- Tabla de Tareas y Estados -->
+      <div class="table-scroll" style="margin-top: 1rem;">
+        <table class="clean-table">
+          <thead>
+            <tr>
+              <th>Tarea</th>
+              <th>Capa ELT</th>
+              <th>Trigger Rule</th>
+              <th>Estado</th>
+              <th>Duraci&oacute;n (ms)</th>
+              <th>Bit&aacute;cora / Detalle</th>
+            </tr>
+          </thead>
+          <tbody id="dag-task-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Seccion Inferior: Prediccion ML (2027 - 2031) + Inmutabilidad Capa Bronce -->
+    <section class="two-col-bottom">
+      <div class="card section-pad">
+        <h2>Predicci&oacute;n ML Siguientes A&ntilde;os (2027 &ndash; 2031)</h2>
+        <p class="section-sub">
+          Ensamble Random Forest + Gradient Boosting + Ciclos FFT entrenado sobre el hist&oacute;rico real 1928 &rarr; 2026.
+        </p>
+        <table class="clean-table">
+          <thead>
+            <tr>
+              <th>A&ntilde;o</th>
+              <th>Escenario Bajista</th>
+              <th>Predicci&oacute;n Base ML</th>
+              <th>Escenario Optimista</th>
+            </tr>
+          </thead>
+          <tbody id="ml-table-body"></tbody>
+        </table>
+      </div>
+
+      <div class="card section-pad">
+        <h2>Paradigma ELT: Inmutabilidad de Capa Bronce</h2>
+        <p class="section-sub">
+          Los datos crudos de la API se persisten intactos con SHA-256 antes de cualquier transformaci&oacute;n.
+        </p>
+        <div id="bronze-audit-grid" class="bronze-grid"></div>
+      </div>
+    </section>
+  </main>
+
+  <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+</body>
+</html>
